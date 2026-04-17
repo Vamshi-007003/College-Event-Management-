@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - ColEvent</title>
+    <meta name="description" content="Browse events, register, and manage your event tickets">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <span>🎓</span> ColEvent Student
+            </div>
+            <div class="nav-right">
+                <span class="nav-user" id="studentName"></span>
+                <button class="btn btn-outline btn-sm" onclick="Auth.logout()">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="dashboard-layout">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>Navigation</h3>
+            </div>
+            <button class="tab-btn active" onclick="switchTab('upcoming-events', this)">
+                <span class="tab-icon">📅</span> Events
+            </button>
+            <button class="tab-btn" onclick="switchTab('my-registrations', this)">
+                <span class="tab-icon">🎟️</span> My Tickets
+            </button>
+            <button class="tab-btn" onclick="switchTab('notifications', this)">
+                <span class="tab-icon">🔔</span> Notifications
+            </button>
+        </div>
+
+        <div class="main-content">
+
+            <!-- Upcoming Events -->
+            <div id="upcoming-events" class="tab-content active">
+                <div class="section-header">
+                    <h2>Available Events</h2>
+                </div>
+                <div class="grid-2" id="studentEventsList">
+                    <div class="loading-overlay"><span class="spinner"></span> Loading events...</div>
+                </div>
+            </div>
+
+            <!-- My Registrations -->
+            <div id="my-registrations" class="tab-content">
+                <div class="section-header">
+                    <h2>My Tickets</h2>
+                </div>
+                <div id="myRegistrationsList">
+                    <div class="loading-overlay"><span class="spinner"></span> Loading tickets...</div>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <div id="notifications" class="tab-content">
+                <div class="section-header">
+                    <h2>Notifications</h2>
+                </div>
+                <div class="card" style="padding: 0;">
+                    <div id="studentNotificationsList">
+                        <div class="loading-overlay"><span class="spinner"></span> Loading...</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Registration / Payment Modal -->
+    <div id="regModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🎟️ Event Registration</h3>
+                <button class="close-modal" onclick="closeModal('regModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="payment-info-box">
+                    <h4 id="rm_title">Event Title</h4>
+                    <p class="text-muted mb-2" id="rm_date"></p>
+                    <div class="amount" id="rm_fee">₹0</div>
+                </div>
+
+                <div id="paymentSection">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                        <span style="font-size: 1.25rem;">💳</span>
+                        <h4 style="margin: 0;">Payment Details</h4>
+                    </div>
+                    <p class="text-muted mb-4" style="font-size: 0.82rem;">
+                        Secure payment via Razorpay. Supports UPI, Cards, Net Banking.
+                    </p>
+                </div>
+
+                <button type="button" id="regSubmitBtn" class="btn btn-primary btn-block btn-lg" onclick="handleRegistration()">
+                    Confirm & Pay
+                </button>
+                <p class="text-center text-muted mt-4" style="font-size: 0.75rem;">🔒 Secured by Razorpay</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Code View Modal -->
+    <div id="qrModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🎫 Your Ticket</h3>
+                <button class="close-modal" onclick="closeModal('qrModal')">×</button>
+            </div>
+            <div class="modal-body" style="text-align: center;">
+                <div class="qr-ticket" id="qrDisplay">
+                    <img id="qrImage" src="" alt="QR Ticket" />
+                    <div class="qr-ticket-info" id="qrInfo"></div>
+                </div>
+                <div style="margin-top: 1.5rem; display: flex; gap: 0.75rem; justify-content: center;">
+                    <button class="btn btn-primary" onclick="downloadCurrentQR()">📥 Download QR</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+    <script>
+        const user = Auth.requireAuth('student');
+        if (user) {
+            document.getElementById('studentName').textContent = user.name;
+        }
+
+        let currentRegEvent = null;
+
+        // Load Events
+        async function loadEvents() {
+            try {
+                const events = await API.get('/events');
+                const list = document.getElementById('studentEventsList');
+                list.innerHTML = '';
+
+                if (events.length === 0) {
+                    list.innerHTML = `
+                        <div class="empty-state" style="grid-column: 1 / -1;">
+                            <div class="empty-state-icon">📅</div>
+                            <h3>No Events Available</h3>
+                            <p>Check back later for upcoming events.</p>
+                        </div>`;
+                    return;
+                }
+
+                // Check registrations for each event
+                const myRegs = await API.get('/registrations/my');
+                const myEventIds = myRegs.map(r => r.eventId?._id || r.eventId);
+
+                events.forEach(ev => {
+                    const isRegistered = myEventIds.includes(ev._id);
+                    const isFull = ev.seatsLeft <= 0;
+                    const isPastDue = new Date(ev.dueDate) < new Date();
+
+                    let actionBtn = '';
+                    if (isRegistered) {
+                        actionBtn = `<button class="btn btn-outline btn-block" disabled>✅ Already Registered</button>`;
+                    } else if (isFull) {
+                        actionBtn = `<button class="btn btn-danger btn-block" disabled>Sold Out</button>`;
+                    } else if (isPastDue) {
+                        actionBtn = `<button class="btn btn-outline btn-block" disabled>Registration Closed</button>`;
+                    } else {
+                        actionBtn = `<button class="btn btn-primary btn-block" onclick="startRegistration('${ev._id}')">Register Now</button>`;
+                    }
+
+                    const bannerHtml = ev.imageUrl
+                        ? `<img src="${ev.imageUrl}" class="event-image" style="border-radius: var(--radius-lg) var(--radius-lg) 0 0;" onerror="this.style.display='none'">`
+                        : `<div class="event-image" style="border-radius: var(--radius-lg) var(--radius-lg) 0 0;">📸</div>`;
+
+                    let galleryHtml = '';
+                    if (ev.additionalImages && ev.additionalImages.length > 0) {
+                        galleryHtml = `<div class="event-gallery" style="display:flex; gap:0.5rem; margin-bottom:1rem; overflow-x:auto; padding-bottom:0.5rem;">`;
+                        ev.additionalImages.forEach(img => {
+                            galleryHtml += `<img src="${img}" style="height: 70px; width: 100px; object-fit: cover; border-radius: var(--radius-sm);" onerror="this.style.display='none'">`;
+                        });
+                        galleryHtml += `</div>`;
+                    }
+
+                    list.innerHTML += `
+                        <div class="event-card">
+                            ${bannerHtml}
+                            <div class="event-content">
+                                <div class="event-title">${escapeHtml(ev.title)}</div>
+                                <div class="event-desc">${escapeHtml(ev.description)}</div>
+                                <div class="event-meta">
+                                    <span>📅 ${formatDate(ev.eventDate)}</span>
+                                    <span class="badge ${isFull ? 'badge-danger' : 'badge-success'}">${ev.seatsLeft} Seats Left</span>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                                    <span class="event-price">${ev.entryFee > 0 ? formatCurrency(ev.entryFee) : 'Free'}</span>
+                                    <span class="event-due">Due: ${formatDate(ev.dueDate)}</span>
+                                </div>
+                                ${galleryHtml}
+                                ${actionBtn}
+                            </div>
+                        </div>`;
+                });
+            } catch (error) {
+                console.error('Load events error:', error);
+                document.getElementById('studentEventsList').innerHTML =
+                    '<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">⚠️</div><h3>Failed to load events</h3></div>';
+            }
+        }
+
+        // Start Registration
+        async function startRegistration(eventId) {
+            try {
+                const events = await API.get('/events');
+                const event = events.find(e => e._id === eventId);
+                if (!event) return;
+
+                currentRegEvent = event;
+                document.getElementById('rm_title').textContent = event.title;
+                document.getElementById('rm_date').textContent = '📅 ' + formatDate(event.eventDate);
+
+                const isFree = event.entryFee === 0;
+                const paymentSection = document.getElementById('paymentSection');
+                const btn = document.getElementById('regSubmitBtn');
+
+                if (isFree) {
+                    paymentSection.style.display = 'none';
+                    document.getElementById('rm_fee').textContent = 'Free Event';
+                    document.getElementById('rm_fee').style.color = 'var(--accent-success)';
+                    btn.innerHTML = '🎟️ Confirm Registration';
+                } else {
+                    paymentSection.style.display = 'block';
+                    document.getElementById('rm_fee').textContent = formatCurrency(event.entryFee);
+                    document.getElementById('rm_fee').style.color = '';
+                    btn.innerHTML = `💳 Pay ${formatCurrency(event.entryFee)} & Register`;
+                }
+
+                openModal('regModal');
+            } catch (error) {
+                showToast('Failed to load event details', 'error');
+            }
+        }
+
+        // Handle Registration
+        async function handleRegistration() {
+            if (!currentRegEvent) return;
+
+            const btn = document.getElementById('regSubmitBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Processing...';
+
+            try {
+                // Step 1: Create payment order
+                const orderResult = await API.post('/payments/create-order', {
+                    eventId: currentRegEvent._id
+                });
+
+                if (!orderResult.ok) {
+                    throw new Error(orderResult.data.error || 'Failed to create order');
+                }
+
+                const orderData = orderResult.data;
+
+                // Free event
+                if (orderData.free) {
+                    const verifyResult = await API.post('/payments/verify', {
+                        eventId: currentRegEvent._id,
+                        mock: true
+                    });
+
+                    if (verifyResult.ok) {
+                        showToast('Registration successful! 🎉', 'success');
+                        closeModal('regModal');
+                        loadEvents();
+                        loadMyRegistrations();
+                    } else {
+                        throw new Error(verifyResult.data.error);
+                    }
+                    return;
+                }
+
+                // Mock payment (Razorpay not configured)
+                if (orderData.mock) {
+                    const confirmed = confirm(`Mock Payment: Pay ${formatCurrency(orderData.amount / 100)} for "${currentRegEvent.title}"?\n\n(Razorpay is not configured. Click OK to simulate payment.)`);
+                    if (!confirmed) {
+                        btn.disabled = false;
+                        btn.innerHTML = `💳 Pay ${formatCurrency(currentRegEvent.entryFee)} & Register`;
+                        return;
+                    }
+
+                    const verifyResult = await API.post('/payments/verify', {
+                        eventId: currentRegEvent._id,
+                        paymentId: 'mock_' + Date.now(),
+                        mock: true
+                    });
+
+                    if (verifyResult.ok) {
+                        showToast('Registration successful! 🎉', 'success');
+                        closeModal('regModal');
+                        loadEvents();
+                        loadMyRegistrations();
+                    } else {
+                        throw new Error(verifyResult.data.error);
+                    }
+                    return;
+                }
+
+                // Real Razorpay payment
+                const options = {
+                    key: orderData.keyId,
+                    amount: orderData.amount,
+                    currency: orderData.currency,
+                    name: 'ColEvent',
+                    description: orderData.eventTitle,
+                    order_id: orderData.orderId,
+                    prefill: {
+                        name: orderData.userName || '',
+                        email: orderData.userEmail || '',
+                        contact: orderData.userPhone || ''
+                    },
+                    theme: {
+                        color: '#6366f1'
+                    },
+                    handler: async function (response) {
+                        try {
+                            const verifyResult = await API.post('/payments/verify', {
+                                eventId: currentRegEvent._id,
+                                paymentId: response.razorpay_payment_id,
+                                orderId: response.razorpay_order_id,
+                                signature: response.razorpay_signature
+                            });
+
+                            if (verifyResult.ok) {
+                                showToast('Payment successful! Registration confirmed! 🎉', 'success');
+                                closeModal('regModal');
+                                loadEvents();
+                                loadMyRegistrations();
+                            } else {
+                                throw new Error(verifyResult.data.error);
+                            }
+                        } catch (err) {
+                            showToast('Payment verification failed: ' + err.message, 'error');
+                        }
+                    },
+                    modal: {
+                        ondismiss: function () {
+                            showToast('Payment cancelled.', 'warning');
+                        }
+                    }
+                };
+
+                const rzp = new Razorpay(options);
+                rzp.open();
+
+            } catch (error) {
+                showToast(error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                const isFree = currentRegEvent && currentRegEvent.entryFee === 0;
+                btn.innerHTML = isFree
+                    ? '🎟️ Confirm Registration'
+                    : `💳 Pay ${formatCurrency(currentRegEvent?.entryFee || 0)} & Register`;
+            }
+        }
+
+        // Load My Registrations
+        async function loadMyRegistrations() {
+            try {
+                const regs = await API.get('/registrations/my');
+                const list = document.getElementById('myRegistrationsList');
+                list.innerHTML = '';
+
+                if (regs.length === 0) {
+                    list.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🎟️</div>
+                            <h3>No Tickets Yet</h3>
+                            <p>Register for events to see your tickets here.</p>
+                        </div>`;
+                    return;
+                }
+
+                regs.forEach(reg => {
+                    const ev = reg.eventId;
+                    if (!ev) return;
+
+                    const isFree = reg.paymentStatus === 'free';
+                    const paymentBadge = isFree
+                        ? `<span class="badge badge-info">Free Event</span>`
+                        : `<span class="badge badge-success">Payment: ${reg.paymentStatus}</span>`;
+
+                    const qrUsedBadge = reg.qrUsed
+                        ? `<span class="badge badge-warning">Ticket Used</span>`
+                        : `<span class="badge badge-success">Ticket Active</span>`;
+
+                    list.innerHTML += `
+                        <div class="reg-card">
+                            <div class="reg-info">
+                                <h3>${escapeHtml(ev.title || 'Event')}</h3>
+                                <p>📅 ${formatDate(ev.eventDate)} &nbsp; • &nbsp; Registered: ${timeAgo(reg.createdAt)}</p>
+                            </div>
+                            <div class="reg-actions">
+                                ${paymentBadge}
+                                ${qrUsedBadge}
+                                <button class="btn btn-primary btn-sm" onclick="viewQR('${reg._id}', '${escapeHtml(ev.title || '')}')">
+                                    🎫 View QR
+                                </button>
+                            </div>
+                        </div>`;
+                });
+            } catch (error) {
+                console.error('Load registrations error:', error);
+            }
+        }
+
+        // View QR Code
+        let currentQRData = null;
+        async function viewQR(registrationId, eventTitle) {
+            try {
+                const data = await API.get(`/qr/download/${registrationId}`);
+                if (data.qrCode) {
+                    currentQRData = data.qrCode;
+                    document.getElementById('qrImage').src = data.qrCode;
+                    document.getElementById('qrInfo').textContent = eventTitle;
+                    openModal('qrModal');
+                } else {
+                    showToast('QR code not available', 'error');
+                }
+            } catch (error) {
+                showToast('Failed to load QR code', 'error');
+            }
+        }
+
+        function downloadCurrentQR() {
+            if (currentQRData) {
+                downloadQR(currentQRData, 'event-ticket-qr.png');
+            }
+        }
+
+        // Load Notifications
+        async function loadNotifications() {
+            try {
+                const notifs = await API.get('/notifications');
+                const list = document.getElementById('studentNotificationsList');
+                list.innerHTML = '';
+
+                if (notifs.length === 0) {
+                    list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔔</div><h3>No notifications</h3></div>';
+                    return;
+                }
+
+                notifs.forEach(n => {
+                    const typeIcons = { info: '🔔', warning: '⚠️', success: '✅', error: '❌' };
+                    list.innerHTML += `
+                        <div class="notification-item">
+                            <div class="notification-icon">${typeIcons[n.type] || '🔔'}</div>
+                            <div class="notification-content">
+                                <h4>${escapeHtml(n.title)}</h4>
+                                <p>${escapeHtml(n.message)}</p>
+                                <span class="notification-time">${timeAgo(n.createdAt)}</span>
+                            </div>
+                        </div>`;
+                });
+            } catch (error) {
+                console.error('Load notifications error:', error);
+            }
+        }
+
+        // Init
+        if (user) {
+            loadEvents();
+            loadMyRegistrations();
+            loadNotifications();
+        }
+    </script>
+
+    <!-- Razorpay Checkout Script (only loads if configured) -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</body>
+</html>

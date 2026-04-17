@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - ColEvent</title>
+    <meta name="description" content="Admin panel for managing events, scanning QR tickets, and viewing reports">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <span>⚡</span> ColEvent Admin
+            </div>
+            <div class="nav-right">
+                <span class="nav-user" id="adminName"></span>
+                <button class="btn btn-outline btn-sm" onclick="Auth.logout()">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="dashboard-layout">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>Admin Panel</h3>
+            </div>
+            <button class="tab-btn active" onclick="switchTab('dashboard', this); loadStats();">
+                <span class="tab-icon">📊</span> Dashboard
+            </button>
+            <button class="tab-btn" onclick="switchTab('manage-events', this); loadEvents();">
+                <span class="tab-icon">📅</span> Events
+            </button>
+            <button class="tab-btn" onclick="switchTab('registrations-tab', this); loadAllRegistrations();">
+                <span class="tab-icon">🎟️</span> Registrations
+            </button>
+            <button class="tab-btn" onclick="switchTab('qr-scanner', this);">
+                <span class="tab-icon">📷</span> QR Scanner
+            </button>
+            <button class="tab-btn" onclick="switchTab('notifications', this); loadNotifications();">
+                <span class="tab-icon">🔔</span> Notifications
+            </button>
+        </div>
+
+        <div class="main-content">
+
+            <!-- Dashboard Stats -->
+            <div id="dashboard" class="tab-content active">
+                <div class="section-header">
+                    <h2>Dashboard Overview</h2>
+                    <div style="display:flex; gap:0.5rem;">
+                        <a href="/api/admin/reports/registrations" class="btn btn-outline btn-sm" id="downloadRegBtn">📥 Registrations CSV</a>
+                        <a href="/api/admin/reports/payments" class="btn btn-outline btn-sm" id="downloadPayBtn">📥 Payments CSV</a>
+                    </div>
+                </div>
+
+                <div class="grid-3 mb-8" id="statsGrid">
+                    <div class="stat-card purple">
+                        <div class="stat-icon">📅</div>
+                        <div class="stat-value" id="statEvents">-</div>
+                        <div class="stat-label">Total Events</div>
+                    </div>
+                    <div class="stat-card green">
+                        <div class="stat-icon">🎟️</div>
+                        <div class="stat-value" id="statRegistrations">-</div>
+                        <div class="stat-label">Registrations</div>
+                    </div>
+                    <div class="stat-card orange">
+                        <div class="stat-icon">💰</div>
+                        <div class="stat-value" id="statRevenue">-</div>
+                        <div class="stat-label">Revenue</div>
+                    </div>
+                    <div class="stat-card cyan">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-value" id="statStudents">-</div>
+                        <div class="stat-label">Students</div>
+                    </div>
+                    <div class="stat-card pink">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-value" id="statTicketsUsed">-</div>
+                        <div class="stat-label">Tickets Scanned</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Manage Events -->
+            <div id="manage-events" class="tab-content">
+                <div class="section-header">
+                    <h2>Events</h2>
+                    <button class="btn btn-primary" onclick="openModal('addEventModal')">+ Create Event</button>
+                </div>
+                <div class="grid-2" id="adminEventsList">
+                    <div class="loading-overlay"><span class="spinner"></span> Loading...</div>
+                </div>
+            </div>
+
+            <!-- Registrations -->
+            <div id="registrations-tab" class="tab-content">
+                <div class="section-header">
+                    <h2>All Registrations</h2>
+                    <a href="/api/admin/reports/registrations" class="btn btn-outline btn-sm" id="downloadRegBtn2">📥 Export CSV</a>
+                </div>
+                <div id="allRegistrationsList">
+                    <div class="loading-overlay"><span class="spinner"></span> Loading...</div>
+                </div>
+            </div>
+
+            <!-- QR Scanner -->
+            <div id="qr-scanner" class="tab-content">
+                <div class="section-header">
+                    <h2>QR Code Scanner</h2>
+                </div>
+                <div class="qr-scanner-container">
+                    <div class="scanner-box" id="scanner-box">
+                        <div id="scanner-placeholder">
+                            <div style="font-size: 3rem; margin-bottom: 1rem;">📷</div>
+                            <h3 style="margin-bottom: 0.5rem;">Ticket Scanner</h3>
+                            <p class="text-muted mb-4">Scan event QR codes to verify entry</p>
+                            <button class="btn btn-primary" onclick="startScanner()">
+                                📸 Start Camera
+                            </button>
+                        </div>
+                        <div id="qr-reader" style="width: 100%; display: none;"></div>
+                    </div>
+
+                    <div style="margin-top: 1.5rem;">
+                        <p class="text-muted mb-2" style="font-size: 0.85rem;">Or paste QR data manually:</p>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="text" id="manualQrInput" class="form-control" placeholder="Paste encrypted QR data...">
+                            <button class="btn btn-primary" onclick="verifyManualQR()">Verify</button>
+                        </div>
+                    </div>
+
+                    <div id="scanResult"></div>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <div id="notifications" class="tab-content">
+                <div class="section-header">
+                    <h2>System Notifications</h2>
+                </div>
+                <div class="card" style="padding: 0;">
+                    <div id="adminNotificationsList">
+                        <div class="loading-overlay"><span class="spinner"></span> Loading...</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Add Event Modal -->
+    <div id="addEventModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Event</h3>
+                <button class="close-modal" onclick="closeModal('addEventModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="addEventForm">
+                    <div class="form-group">
+                        <label>Event Title</label>
+                        <input type="text" id="ev_title" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Event Description</label>
+                        <textarea id="ev_desc" class="form-control" rows="3" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Banner Image URL</label>
+                        <input type="url" id="ev_img" class="form-control" placeholder="https://example.com/banner.jpg">
+                    </div>
+                    <div class="form-group">
+                        <label>Gallery Images (URLs, comma separated)</label>
+                        <textarea id="ev_gallery" class="form-control" rows="2" placeholder="https://example.com/img1.jpg, https://example.com/img2.jpg"></textarea>
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Event Date</label>
+                            <input type="datetime-local" id="ev_date" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Registration Due Date</label>
+                            <input type="datetime-local" id="ev_due" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="grid-2 mb-4">
+                        <div class="form-group">
+                            <label>Total Seats</label>
+                            <input type="number" id="ev_seats" class="form-control" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Entry Fee (₹)</label>
+                            <input type="number" id="ev_fee" class="form-control" min="0" value="0" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">🚀 Publish Event</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Event Modal -->
+    <div id="editEventModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Event</h3>
+                <button class="close-modal" onclick="closeModal('editEventModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="editEventForm">
+                    <input type="hidden" id="ed_eventId">
+                    <div class="form-group">
+                        <label>Event Title</label>
+                        <input type="text" id="ed_title" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Event Description</label>
+                        <textarea id="ed_desc" class="form-control" rows="3" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Banner Image URL</label>
+                        <input type="url" id="ed_img" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Gallery Images (URLs, comma separated)</label>
+                        <textarea id="ed_gallery" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Event Date</label>
+                            <input type="datetime-local" id="ed_date" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Registration Due Date</label>
+                            <input type="datetime-local" id="ed_due" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="grid-2 mb-4">
+                        <div class="form-group">
+                            <label>Total Seats</label>
+                            <input type="number" id="ed_seats" class="form-control" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Entry Fee (₹)</label>
+                            <input type="number" id="ed_fee" class="form-control" min="0" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-secondary btn-block">💾 Save Changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+    <!-- html5-qrcode for camera scanning -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script>
+        const user = Auth.requireAuth('admin');
+        if (user) {
+            document.getElementById('adminName').textContent = user.name;
+        }
+
+        // Fix CSV download links to include auth token
+        document.querySelectorAll('a[href^="/api/admin/reports"]').forEach(a => {
+            a.addEventListener('click', async (e) => {
+                e.preventDefault();
+                try {
+                    const res = await fetch(a.href, {
+                        headers: { 'Authorization': `Bearer ${API.token}` }
+                    });
+                    if (!res.ok) throw new Error('Download failed');
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = a.href.includes('payments') ? 'payments_report.csv' : 'registrations_report.csv';
+                    link.click();
+                    URL.revokeObjectURL(url);
+                    showToast('Report downloaded!', 'success');
+                } catch (err) {
+                    showToast('Failed to download report', 'error');
+                }
+            });
+        });
+
+        // ========== STATS ==========
+        async function loadStats() {
+            try {
+                const stats = await API.get('/admin/stats');
+                animateCounter('statEvents', stats.totalEvents);
+                animateCounter('statRegistrations', stats.totalRegistrations);
+                animateCounter('statStudents', stats.totalStudents);
+                animateCounter('statTicketsUsed', stats.ticketsUsed);
+                document.getElementById('statRevenue').textContent = formatCurrency(stats.totalRevenue);
+            } catch (error) {
+                console.error('Stats error:', error);
+            }
+        }
+
+        function animateCounter(elementId, target) {
+            const el = document.getElementById(elementId);
+            const duration = 800;
+            const start = 0;
+            const startTime = performance.now();
+
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                // Ease out cubic
+                const eased = 1 - Math.pow(1 - progress, 3);
+                el.textContent = Math.floor(eased * target);
+                if (progress < 1) requestAnimationFrame(update);
+            }
+            requestAnimationFrame(update);
+        }
+
+        // ========== EVENTS ==========
+        async function loadEvents() {
+            try {
+                const events = await API.get('/events');
+                const list = document.getElementById('adminEventsList');
+                list.innerHTML = '';
+
+                if (events.length === 0) {
+                    list.innerHTML = `
+                        <div class="empty-state" style="grid-column: 1 / -1;">
+                            <div class="empty-state-icon">📅</div>
+                            <h3>No Events Created</h3>
+                            <p>Click "Create Event" to get started.</p>
+                        </div>`;
+                    return;
+                }
+
+                events.forEach(ev => {
+                    const isFull = ev.seatsLeft <= 0;
+                    const bannerHtml = ev.imageUrl
+                        ? `<img src="${ev.imageUrl}" class="event-image" style="border-radius: var(--radius-lg) var(--radius-lg) 0 0;" onerror="this.style.display='none'">`
+                        : `<div class="event-image" style="border-radius: var(--radius-lg) var(--radius-lg) 0 0;">📸</div>`;
+
+                    let galleryHtml = '';
+                    if (ev.additionalImages && ev.additionalImages.length > 0) {
+                        galleryHtml = `<div class="event-gallery" style="display:flex; gap:0.5rem; margin-bottom:1rem; overflow-x:auto; padding-bottom:0.5rem;">`;
+                        ev.additionalImages.forEach(img => {
+                            galleryHtml += `<img src="${img}" style="height: 60px; width: 60px; object-fit: cover; border-radius: var(--radius-sm);" onerror="this.style.display='none'">`;
+                        });
+                        galleryHtml += `</div>`;
+                    }
+
+                    list.innerHTML += `
+                        <div class="event-card">
+                            ${bannerHtml}
+                            <div class="event-content">
+                                <div class="event-title">${escapeHtml(ev.title)}</div>
+                                <div class="event-desc">${escapeHtml(ev.description)}</div>
+                                <div class="event-meta">
+                                    <span>📅 ${formatDate(ev.eventDate)}</span>
+                                    <span class="badge ${isFull ? 'badge-danger' : 'badge-success'}">${ev.seatsLeft} / ${ev.totalSeats} Seats</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                    <span class="event-price">${ev.entryFee > 0 ? formatCurrency(ev.entryFee) : 'Free'}</span>
+                                    <span class="event-due">Due: ${formatDate(ev.dueDate)}</span>
+                                </div>
+                                ${galleryHtml}
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <button class="btn btn-outline btn-sm" style="flex:1;" onclick="openEditModal('${ev._id}')">✏️ Edit</button>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteEvent('${ev._id}')">🗑️</button>
+                                </div>
+                            </div>
+                        </div>`;
+                });
+            } catch (error) {
+                console.error('Load events error:', error);
+            }
+        }
+
+        // Add Event
+        document.getElementById('addEventForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const result = await API.post('/events', {
+                    title: document.getElementById('ev_title').value,
+                    description: document.getElementById('ev_desc').value,
+                    eventDate: document.getElementById('ev_date').value,
+                    dueDate: document.getElementById('ev_due').value,
+                    totalSeats: document.getElementById('ev_seats').value,
+                    entryFee: document.getElementById('ev_fee').value,
+                    imageUrl: document.getElementById('ev_img').value,
+                    additionalImages: document.getElementById('ev_gallery').value.split(',').map(u => u.trim()).filter(u => u)
+                });
+
+                if (result.ok) {
+                    closeModal('addEventModal');
+                    document.getElementById('addEventForm').reset();
+                    showToast('Event published successfully! 🚀', 'success');
+                    loadEvents();
+                } else {
+                    throw new Error(result.data.error);
+                }
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        });
+
+        // Edit Event
+        async function openEditModal(eventId) {
+            try {
+                const events = await API.get('/events');
+                const event = events.find(e => e._id === eventId);
+                if (!event) return;
+
+                document.getElementById('ed_eventId').value = event._id;
+                document.getElementById('ed_title').value = event.title;
+                document.getElementById('ed_desc').value = event.description;
+                document.getElementById('ed_date').value = event.eventDate ? event.eventDate.slice(0, 16) : '';
+                document.getElementById('ed_due').value = event.dueDate ? event.dueDate.slice(0, 16) : '';
+                document.getElementById('ed_seats').value = event.totalSeats;
+                document.getElementById('ed_fee').value = event.entryFee;
+                document.getElementById('ed_img').value = event.imageUrl || '';
+                document.getElementById('ed_gallery').value = (event.additionalImages || []).join(', ');
+
+                openModal('editEventModal');
+            } catch (err) {
+                showToast('Failed to load event', 'error');
+            }
+        }
+
+        document.getElementById('editEventForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const eventId = document.getElementById('ed_eventId').value;
+                const result = await API.put(`/events/${eventId}`, {
+                    title: document.getElementById('ed_title').value,
+                    description: document.getElementById('ed_desc').value,
+                    eventDate: document.getElementById('ed_date').value,
+                    dueDate: document.getElementById('ed_due').value,
+                    totalSeats: document.getElementById('ed_seats').value,
+                    entryFee: document.getElementById('ed_fee').value,
+                    imageUrl: document.getElementById('ed_img').value,
+                    additionalImages: document.getElementById('ed_gallery').value.split(',').map(u => u.trim()).filter(u => u)
+                });
+
+                if (result.ok) {
+                    closeModal('editEventModal');
+                    showToast('Event updated! ✅', 'success');
+                    loadEvents();
+                } else {
+                    throw new Error(result.data.error);
+                }
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        });
+
+        // Delete Event
+        async function deleteEvent(eventId) {
+            if (!confirm('Are you sure you want to delete this event? This cannot be undone.')) return;
+            try {
+                const result = await API.delete(`/events/${eventId}`);
+                if (result.ok) {
+                    showToast('Event deleted.', 'success');
+                    loadEvents();
+                } else {
+                    throw new Error(result.data.error);
+                }
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        // ========== REGISTRATIONS ==========
+        async function loadAllRegistrations() {
+            try {
+                const regs = await API.get('/registrations/all');
+                const list = document.getElementById('allRegistrationsList');
+                list.innerHTML = '';
+
+                if (regs.length === 0) {
+                    list.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🎟️</div>
+                            <h3>No Registrations</h3>
+                            <p>Registrations will appear here as students sign up.</p>
+                        </div>`;
+                    return;
+                }
+
+                regs.forEach(reg => {
+                    const statusColors = {
+                        paid: 'badge-success',
+                        free: 'badge-info',
+                        pending: 'badge-warning',
+                        failed: 'badge-danger'
+                    };
+
+                    list.innerHTML += `
+                        <div class="reg-card">
+                            <div class="reg-info">
+                                <h3>${escapeHtml(reg.eventId?.title || 'Event')}</h3>
+                                <p>👤 ${escapeHtml(reg.studentId?.name || 'N/A')} &nbsp;|&nbsp; 📧 ${escapeHtml(reg.studentId?.email || 'N/A')} &nbsp;|&nbsp; 🏛️ ${escapeHtml(reg.studentId?.department || 'N/A')}</p>
+                            </div>
+                            <div class="reg-actions">
+                                <span class="badge ${statusColors[reg.paymentStatus] || 'badge-info'}">${reg.paymentStatus}</span>
+                                <span class="badge ${reg.qrUsed ? 'badge-warning' : 'badge-success'}">${reg.qrUsed ? 'Checked In' : 'Not Used'}</span>
+                                <span class="text-muted" style="font-size:0.75rem;">${formatCurrency(reg.amount)}</span>
+                            </div>
+                        </div>`;
+                });
+            } catch (error) {
+                console.error('Load registrations error:', error);
+            }
+        }
+
+        // ========== QR SCANNER ==========
+        let html5QrCode = null;
+
+        function startScanner() {
+            const placeholder = document.getElementById('scanner-placeholder');
+            const readerDiv = document.getElementById('qr-reader');
+            const scannerBox = document.getElementById('scanner-box');
+
+            placeholder.style.display = 'none';
+            readerDiv.style.display = 'block';
+            scannerBox.classList.add('active');
+
+            html5QrCode = new Html5Qrcode('qr-reader');
+            html5QrCode.start(
+                { facingMode: 'environment' },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                onScanSuccess,
+                () => {} // ignore scan failures
+            ).catch(err => {
+                showToast('Camera access failed: ' + err, 'error');
+                placeholder.style.display = 'block';
+                readerDiv.style.display = 'none';
+                scannerBox.classList.remove('active');
+            });
+        }
+
+        async function onScanSuccess(decodedText) {
+            // Stop scanner after successful scan
+            if (html5QrCode) {
+                await html5QrCode.stop();
+                document.getElementById('scanner-placeholder').style.display = 'block';
+                document.getElementById('qr-reader').style.display = 'none';
+                document.getElementById('scanner-box').classList.remove('active');
+            }
+            await verifyQR(decodedText);
+        }
+
+        function verifyManualQR() {
+            const input = document.getElementById('manualQrInput');
+            if (input.value.trim()) {
+                verifyQR(input.value.trim());
+                input.value = '';
+            }
+        }
+
+        async function verifyQR(qrData) {
+            const resultDiv = document.getElementById('scanResult');
+            resultDiv.innerHTML = '<div class="loading-overlay"><span class="spinner"></span> Verifying...</div>';
+
+            try {
+                const result = await API.post('/qr/verify', { qrData });
+
+                if (result.ok && result.data.valid) {
+                    resultDiv.innerHTML = `
+                        <div class="scan-result valid">
+                            <h3>✅ Valid Ticket — Entry Granted</h3>
+                            <div class="scan-detail">
+                                <span class="scan-detail-label">Student</span>
+                                <span class="scan-detail-value">${escapeHtml(result.data.student?.name || 'N/A')}</span>
+                            </div>
+                            <div class="scan-detail">
+                                <span class="scan-detail-label">Email</span>
+                                <span class="scan-detail-value">${escapeHtml(result.data.student?.email || 'N/A')}</span>
+                            </div>
+                            <div class="scan-detail">
+                                <span class="scan-detail-label">Department</span>
+                                <span class="scan-detail-value">${escapeHtml(result.data.student?.department || 'N/A')}</span>
+                            </div>
+                            <div class="scan-detail">
+                                <span class="scan-detail-label">Event</span>
+                                <span class="scan-detail-value">${escapeHtml(result.data.event?.title || 'N/A')}</span>
+                            </div>
+                            <div class="scan-detail">
+                                <span class="scan-detail-label">Payment</span>
+                                <span class="scan-detail-value badge badge-success">${result.data.paymentStatus}</span>
+                            </div>
+                            <div class="scan-detail">
+                                <span class="scan-detail-label">Registered</span>
+                                <span class="scan-detail-value">${formatDate(result.data.registeredAt)}</span>
+                            </div>
+                        </div>`;
+                    showToast('Ticket verified! Entry granted. ✅', 'success');
+                } else {
+                    const errMsg = result.data.error || 'Invalid ticket';
+                    const isDuplicate = result.data.duplicate;
+                    resultDiv.innerHTML = `
+                        <div class="scan-result invalid">
+                            <h3>❌ ${isDuplicate ? 'Duplicate Entry!' : 'Invalid Ticket'}</h3>
+                            <p style="color: var(--text-secondary); margin-bottom: 1rem;">${escapeHtml(errMsg)}</p>
+                            ${isDuplicate ? `
+                                <div class="scan-detail">
+                                    <span class="scan-detail-label">Student</span>
+                                    <span class="scan-detail-value">${escapeHtml(result.data.student || 'N/A')}</span>
+                                </div>
+                                <div class="scan-detail">
+                                    <span class="scan-detail-label">Event</span>
+                                    <span class="scan-detail-value">${escapeHtml(result.data.event || 'N/A')}</span>
+                                </div>
+                                <div class="scan-detail">
+                                    <span class="scan-detail-label">Previously Used</span>
+                                    <span class="scan-detail-value">${formatDate(result.data.usedAt)}</span>
+                                </div>
+                            ` : ''}
+                        </div>`;
+                    showToast(errMsg, 'error');
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="scan-result invalid">
+                        <h3>❌ Verification Failed</h3>
+                        <p style="color: var(--text-secondary);">Could not verify the QR code. Please try again.</p>
+                    </div>`;
+                showToast('QR verification failed', 'error');
+            }
+        }
+
+        // ========== NOTIFICATIONS ==========
+        async function loadNotifications() {
+            try {
+                const notifs = await API.get('/notifications');
+                const list = document.getElementById('adminNotificationsList');
+                list.innerHTML = '';
+
+                if (notifs.length === 0) {
+                    list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔔</div><h3>No notifications</h3></div>';
+                    return;
+                }
+
+                notifs.forEach(n => {
+                    const typeIcons = { info: '🔔', warning: '⚠️', success: '✅', error: '❌' };
+                    list.innerHTML += `
+                        <div class="notification-item">
+                            <div class="notification-icon">${typeIcons[n.type] || '🔔'}</div>
+                            <div class="notification-content">
+                                <h4>${escapeHtml(n.title)}</h4>
+                                <p>${escapeHtml(n.message)}</p>
+                                <span class="notification-time">${timeAgo(n.createdAt)}</span>
+                            </div>
+                        </div>`;
+                });
+            } catch (error) {
+                console.error('Load notifications error:', error);
+            }
+        }
+
+        // ========== INIT ==========
+        if (user) {
+            loadStats();
+            loadEvents();
+        }
+    </script>
+</body>
+</html>

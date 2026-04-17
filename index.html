@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ColEvent - College Event Management</title>
+    <meta name="description" content="Secure college event management system with QR-based entry and online payments">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="login-page">
+
+    <div class="login-wrapper">
+
+        <!-- Robot Interactive Character -->
+        <div class="robot-container" id="robot">
+            <div class="robot-antenna"></div>
+            <div class="robot-head">
+                <div class="robot-face">
+                    <div class="robot-eyes">
+                        <div class="robot-eye left-eye">
+                            <div class="robot-pupil"></div>
+                            <div class="robot-eyelid"></div>
+                        </div>
+                        <div class="robot-eye right-eye">
+                            <div class="robot-pupil"></div>
+                            <div class="robot-eyelid"></div>
+                        </div>
+                    </div>
+                    <div class="robot-mouth"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="auth-card">
+            
+            <!-- STUDENT VIEW CONTAINER -->
+            <div id="student-view" class="fade-enter">
+                <div class="auth-header">
+                    <h2 id="student-header-title">Student Portal</h2>
+                    <p id="student-header-desc">Welcome back! Please sign in to your account.</p>
+                </div>
+
+                <!-- Student Sign In Form -->
+                <form id="student-login-form">
+                    <div class="auth-form-floating">
+                        <input type="text" id="s_username" placeholder=" " required>
+                        <label>Student Username</label>
+                    </div>
+                    <div class="auth-form-floating">
+                        <input type="password" id="s_password" placeholder=" " required class="privacy-input">
+                        <label>Password</label>
+                    </div>
+                    <button type="submit" class="auth-btn" id="student-login-btn">Sign in</button>
+                    
+                    <div class="auth-switch">
+                        New student? <a href="#" onclick="toggleMode('student', 'signup'); return false;">Create an account</a>
+                    </div>
+                </form>
+
+                <!-- Student Sign Up Form -->
+                <form id="student-register-form" class="login-hidden">
+                    <div class="auth-form-floating">
+                        <input type="text" id="r_name" placeholder=" " required>
+                        <label>Full Name</label>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <div class="auth-form-floating" style="flex:1;">
+                            <input type="text" id="r_username" placeholder=" " required>
+                            <label>Username</label>
+                        </div>
+                        <div class="auth-form-floating" style="flex:1;">
+                            <input type="password" id="r_password" placeholder=" " required class="privacy-input">
+                            <label>Password</label>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <div class="auth-form-floating" style="flex:1;">
+                            <input type="email" id="r_email" placeholder=" " required>
+                            <label>College Email</label>
+                        </div>
+                        <div class="auth-form-floating" style="flex:1;">
+                            <input type="text" id="r_phone" placeholder=" " required>
+                            <label>Phone</label>
+                        </div>
+                    </div>
+                    <div class="auth-form-floating">
+                        <input type="text" id="r_dept" placeholder=" " required>
+                        <label>Department</label>
+                    </div>
+                    
+                    <button type="submit" class="auth-btn" id="student-register-btn">Create Account</button>
+                    
+                    <div class="auth-switch">
+                        Already have an account? <a href="#" onclick="toggleMode('student', 'login'); return false;">Sign In</a>
+                    </div>
+                </form>
+
+            </div>
+
+            <!-- ADMIN VIEW CONTAINER -->
+            <div id="admin-view" class="fade-enter login-hidden">
+                <div class="auth-header">
+                    <h2 id="admin-header-title">Administrator</h2>
+                    <p id="admin-header-desc">Manage college events and statistics.</p>
+                </div>
+
+                <!-- Admin Sign In Form -->
+                <form id="admin-login-form">
+                    <div class="auth-form-floating">
+                        <input type="text" id="a_username" placeholder=" " required>
+                        <label>Admin ID</label>
+                    </div>
+                    <div class="auth-form-floating">
+                        <input type="password" id="a_password" placeholder=" " required class="privacy-input">
+                        <label>Password</label>
+                    </div>
+                    <button type="submit" class="auth-btn btn-admin" id="admin-login-btn">Sign in to Dashboard</button>
+
+                    <div class="auth-switch">
+                        Need admin access? <a href="#" onclick="toggleMode('admin', 'signup'); return false;">Register as Admin</a>
+                    </div>
+                </form>
+
+                <!-- Admin Sign Up Form -->
+                <form id="admin-register-form" class="login-hidden">
+                    <div class="auth-form-floating">
+                        <input type="text" id="ar_name" placeholder=" " required>
+                        <label>Full Name</label>
+                    </div>
+                    <div class="auth-form-floating">
+                        <input type="text" id="ar_username" placeholder=" " required>
+                        <label>Admin ID (Username)</label>
+                    </div>
+                    <div class="auth-form-floating">
+                        <input type="password" id="ar_password" placeholder=" " required class="privacy-input">
+                        <label>Password</label>
+                    </div>
+                    <div class="auth-form-floating">
+                        <input type="password" id="ar_secret" placeholder=" " required class="privacy-input">
+                        <label>Secret Key</label>
+                    </div>
+
+                    <button type="submit" class="auth-btn btn-admin" id="admin-register-btn">Register Admin Access</button>
+
+                    <div class="auth-switch">
+                        Already registered? <a href="#" onclick="toggleMode('admin', 'login'); return false;">Sign In</a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Bottom Toggle Footer -->
+            <div class="role-toggle-footer">
+                <span id="role-toggle-text">
+                    Are you an administrator? <br/>
+                    <a href="#" onclick="toggleRole('admin'); return false;">Switch to Admin Login</a>
+                </span>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="/js/app.js"></script>
+    <script>
+        // Check session
+        const user = Auth.getCurrentUser();
+        if (user) {
+            window.location.href = user.role === 'admin' ? '/admin.html' : '/student.html';
+        }
+
+        // --- View & Mode Toggles ---
+        function toggleRole(role) {
+            const studentView = document.getElementById('student-view');
+            const adminView = document.getElementById('admin-view');
+            const toggleText = document.getElementById('role-toggle-text');
+
+            if (role === 'admin') {
+                studentView.classList.add('login-hidden');
+                adminView.classList.remove('login-hidden');
+                toggleText.innerHTML = `Are you a student? <br/><a href="#" onclick="toggleRole('student'); return false;">Switch to Student Login</a>`;
+                toggleMode('admin', 'login');
+            } else {
+                adminView.classList.add('login-hidden');
+                studentView.classList.remove('login-hidden');
+                toggleText.innerHTML = `Are you an administrator? <br/><a href="#" onclick="toggleRole('admin'); return false;">Switch to Admin Login</a>`;
+                toggleMode('student', 'login');
+            }
+        }
+
+        function toggleMode(role, mode) {
+            if (role === 'student') {
+                const loginForm = document.getElementById('student-login-form');
+                const regForm = document.getElementById('student-register-form');
+                const title = document.getElementById('student-header-title');
+                const desc = document.getElementById('student-header-desc');
+
+                if (mode === 'signup') {
+                    loginForm.classList.add('login-hidden');
+                    regForm.classList.remove('login-hidden');
+                    title.innerText = 'Create Account';
+                    desc.innerText = 'Join to register for campus events.';
+                } else {
+                    regForm.classList.add('login-hidden');
+                    loginForm.classList.remove('login-hidden');
+                    title.innerText = 'Student Portal';
+                    desc.innerText = 'Welcome back! Please sign in to your account.';
+                }
+            } else if (role === 'admin') {
+                const loginForm = document.getElementById('admin-login-form');
+                const regForm = document.getElementById('admin-register-form');
+                const title = document.getElementById('admin-header-title');
+                const desc = document.getElementById('admin-header-desc');
+
+                if (mode === 'signup') {
+                    loginForm.classList.add('login-hidden');
+                    regForm.classList.remove('login-hidden');
+                    title.innerText = 'Register Admin';
+                    desc.innerText = 'Securely enroll as a new administrator.';
+                } else {
+                    regForm.classList.add('login-hidden');
+                    loginForm.classList.remove('login-hidden');
+                    title.innerText = 'Administrator';
+                    desc.innerText = 'Manage college events and statistics.';
+                }
+            }
+        }
+
+        // --- Submit Handlers ---
+        document.getElementById('student-login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('student-login-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Signing in...';
+            try {
+                const u = await Auth.login(
+                    document.getElementById('s_username').value,
+                    document.getElementById('s_password').value
+                );
+                if (u && u.role === 'student') {
+                    showToast('Welcome back, ' + u.name + '!', 'success');
+                    setTimeout(() => window.location.href = '/student.html', 500);
+                } else {
+                    showToast('This account is not a student account.', 'error');
+                }
+            } catch (err) {
+                showToast(err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Sign in';
+            }
+        });
+
+        document.getElementById('admin-login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('admin-login-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Signing in...';
+            try {
+                const u = await Auth.login(
+                    document.getElementById('a_username').value,
+                    document.getElementById('a_password').value
+                );
+                if (u && u.role === 'admin') {
+                    showToast('Welcome back, ' + u.name + '!', 'success');
+                    setTimeout(() => window.location.href = '/admin.html', 500);
+                } else {
+                    showToast('This account is not an admin account.', 'error');
+                }
+            } catch (err) {
+                showToast(err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Sign in to Dashboard';
+            }
+        });
+
+        document.getElementById('student-register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('student-register-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Creating...';
+            try {
+                await Auth.register({
+                    username: document.getElementById('r_username').value,
+                    password: document.getElementById('r_password').value,
+                    name: document.getElementById('r_name').value,
+                    email: document.getElementById('r_email').value,
+                    phone: document.getElementById('r_phone').value,
+                    department: document.getElementById('r_dept').value,
+                    role: 'student'
+                });
+                showToast('Account created successfully!', 'success');
+                setTimeout(() => window.location.href = '/student.html', 500);
+            } catch (err) {
+                showToast(err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Create Account';
+            }
+        });
+
+        document.getElementById('admin-register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('admin-register-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Registering...';
+            try {
+                await Auth.register({
+                    username: document.getElementById('ar_username').value,
+                    password: document.getElementById('ar_password').value,
+                    name: document.getElementById('ar_name').value,
+                    role: 'admin',
+                    secretKey: document.getElementById('ar_secret').value
+                });
+                showToast('Admin account created!', 'success');
+                setTimeout(() => window.location.href = '/admin.html', 500);
+            } catch (err) {
+                showToast(err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Register Admin Access';
+            }
+        });
+
+        // --- Robot Interactive Logic ---
+        const robot = document.getElementById('robot');
+        const pupils = document.querySelectorAll('.robot-pupil');
+        const eyes = document.querySelectorAll('.robot-eye');
+        const privacyInputs = document.querySelectorAll('.privacy-input');
+
+        window.addEventListener('mousemove', (e) => {
+            const rekt = robot.getBoundingClientRect();
+            const robotCenterX = rekt.left + rekt.width / 2;
+            const robotCenterY = rekt.top + rekt.height / 2;
+            const angle = Math.atan2(e.clientY - robotCenterY, e.clientX - robotCenterX);
+            const distance = Math.min(Math.hypot(e.clientX - robotCenterX, e.clientY - robotCenterY), 50);
+            const maxTravel = 5;
+            const travelDistance = (distance / 50) * maxTravel;
+            const pupilX = Math.cos(angle) * travelDistance;
+            const pupilY = Math.sin(angle) * travelDistance;
+
+            pupils.forEach(pupil => {
+                pupil.style.transform = `translate(calc(-50% + ${pupilX}px), calc(-50% + ${pupilY}px))`;
+            });
+        });
+
+        privacyInputs.forEach(input => {
+            input.addEventListener('focus', () => {
+                eyes.forEach(eye => eye.classList.add('closed'));
+            });
+            input.addEventListener('blur', () => {
+                eyes.forEach(eye => eye.classList.remove('closed'));
+            });
+        });
+    </script>
+</body>
+</html>
